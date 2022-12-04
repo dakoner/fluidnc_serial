@@ -1,3 +1,4 @@
 build/
 dist/
 fluidnc_serial.egg-info
+fluidnc_serial/__pycache__

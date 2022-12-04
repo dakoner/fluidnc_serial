@@ -6,8 +6,7 @@ import threading
 import paho.mqtt.client as mqtt
 
 TARGET="microcontroller"
-IMAGE_TIMEOUT=0.1
-STATUS_TIMEOUT=0.1
+STATUS_TIMEOUT=0.01
 
 def openSerial(port, baud):
     serialport = serial.serial_for_url(port, do_not_open=True)
@@ -35,6 +34,8 @@ class SerialInterface:
         self.mqtt_host = mqtt_host
         self.startMqtt()
         self.status = None
+        self.state = None
+        self.m_pos = None
         self.startStatusThread()
         
     def startStatusThread(self):
@@ -58,17 +59,18 @@ class SerialInterface:
         if message.startswith("<") and message.endswith(">"):
             # print("STATUS:", message)
             rest = message[1:-3].split('|')
-            self.state = rest[0]
-            self.client.publish(f"{TARGET}/state", self.state)
+            new_state = rest[0]
+            if new_state != self.state:
+                self.state = new_state
+                self.client.publish(f"{TARGET}/state", self.state, retain=True)
             t = time.time()
             self.status_time = t
             for item in rest:
                 if item.startswith("MPos"):
-                    self.m_pos = [float(field) for field in item[5:].split(',')]
-                    self.client.publish(f"{TARGET}/m_pos", str(self.m_pos))
-                elif item.startswith("WCO"):
-                    self.w_pos = [float(field) for field in item[4:].split(',')]
-                    self.client.publish(f"{TARGET}/w_pos", str(self.w_pos))
+                    new_m_pos = [float(field) for field in item[5:].split(',')]
+                    if self.m_pos != new_m_pos:
+                        self.m_pos = new_m_pos
+                        self.client.publish(f"{TARGET}/m_pos", str(self.m_pos), retain=True)
         else:
             print("OUTPUT:", message)
             self.client.publish(f"{TARGET}/output", message)
