@@ -1,8 +1,9 @@
 #!/bin/env python
 from fluidnc_serial import serial_interface
+import sys
 
 def main():
-    s = serial_interface.SerialInterface("/dev/ttyUSB0", "microcontroller")
+    s = serial_interface.SerialInterface(sys.argv[1], "microcontroller")
     while True:
         s.readline()
 
