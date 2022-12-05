@@ -6,7 +6,7 @@ import threading
 import paho.mqtt.client as mqtt
 
 TARGET="microcontroller"
-STATUS_TIMEOUT=0.01
+STATUS_TIMEOUT=0.05
 
 def openSerial(port, baud):
     serialport = serial.serial_for_url(port, do_not_open=True)
@@ -53,7 +53,11 @@ class SerialInterface:
         
     def readline(self):
         message = self.serialport.readline()
-        message = str(message, 'utf8').strip()
+        try:
+            message = str(message, 'utf8').strip()
+        except UnicodeDecodeError:
+            print("Failed to decode", message)
+            return
         if message == '':
             return
         if message.startswith("<") and message.endswith(">"):
@@ -68,9 +72,8 @@ class SerialInterface:
             for item in rest:
                 if item.startswith("MPos"):
                     new_m_pos = [float(field) for field in item[5:].split(',')]
-                    if self.m_pos != new_m_pos:
-                        self.m_pos = new_m_pos
-                        self.client.publish(f"{TARGET}/m_pos", str(self.m_pos), retain=True)
+                    self.m_pos = new_m_pos
+                    self.client.publish(f"{TARGET}/m_pos", str(self.m_pos), retain=True)
         else:
             print("OUTPUT:", message)
             self.client.publish(f"{TARGET}/output", message)
