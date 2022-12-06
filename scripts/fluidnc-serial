@@ -1,11 +1,74 @@
 #!/bin/env python
-from fluidnc_serial import serial_interface
+from fluidnc_serial import serial_interface_qobject
 import sys
+import signal
+from PyQt5 import QtCore
+import paho.mqtt.client as mqtt
+
+TARGET='dektop'
+MQTT_HOST='dektop'
+
+
+
+class FluidNCSerial(QtCore.QCoreApplication):
+
+    def __init__(self, argv):
+        super().__init__(argv)
+
+        self.serial = serial_interface_qobject.SerialInterface(sys.argv[1], sys.argv[2])
+        self.serial.posChanged.connect(self.onPosChange)
+        self.serial.stateChanged.connect(self.onStateChange)
+        self.serial.messageChanged.connect(self.onMessageChanged)
+        self.startMqtt()
+
+    def startMqtt(self):
+        self.client =  mqtt.Client()
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.connect(MQTT_HOST)
+
+        self.client.loop_start()
+
+    
+    def on_connect(self, client, userdata, flags, rc):
+        print("on_connect")
+        self.client.subscribe(f"{TARGET}/command")
+
+    def on_message(self, client, userdata, message):
+        if message.topic == f"{TARGET}/command":
+            command = message.payload.decode("utf-8")
+            if command == '?':
+                self.serial.write(command)
+            else:
+                print("COMMAND:", command)
+                self.serial.write(command.strip() + "\n")
+        elif message.topic == f"{TARGET}/reset":
+            if message.payload.decode("utf-8") == "hard":
+                self.reset()
+            else:
+                self.soft_reset()
+        elif message.topic == f"{TARGET}/cancel":
+            print("cancel")
+            self.serial.write(bytes([0x85]))
+            
+    def onMessageChanged(self, message):
+        print("message changed", message)
+        self.client.publish(f"{TARGET}/output", message)
+
+    def onPosChange(self, *pos):
+        print("pos changed", pos)
+        spos = str(pos)
+        self.client.publish(f"{TARGET}/m_pos", spos, retain=True)
+
+    def onStateChange(self, state):
+        print("state changed", state)
+        self.client.publish(f"{TARGET}/state", state, retain=True)
 
 def main():
-    s = serial_interface.SerialInterface(sys.argv[1], "microcontroller")
-    while True:
-        s.readline()
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    f = FluidNCSerial(sys.argv)
+    f.exec_()
 
 if __name__ == "__main__":
     main()
