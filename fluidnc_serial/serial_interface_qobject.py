@@ -103,6 +103,10 @@ class SerialInterface(QtCore.QObject):
         print("soft reset")
         self.serialport.write(b"\x18") # Ctrl-X
 
+    def cancel(self):
+        print("cancel")
+        self.serialport.write(bytes([0x85]))
+
     def reset(self):
         print("reset\r")
         self.serialport.dtr = False
