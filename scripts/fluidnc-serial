@@ -31,7 +31,6 @@ class FluidNCSerial(QtCore.QCoreApplication):
 
     
     def on_connect(self, client, userdata, flags, rc):
-        print("on_connect")
         self.client.subscribe(f"{TARGET}/command")
 
     def on_message(self, client, userdata, message):
@@ -48,20 +47,16 @@ class FluidNCSerial(QtCore.QCoreApplication):
             else:
                 self.soft_reset()
         elif message.topic == f"{TARGET}/cancel":
-            print("cancel")
             self.serial.write(bytes([0x85]))
             
     def onMessageChanged(self, message):
-        print("message changed", message)
         self.client.publish(f"{TARGET}/output", message)
 
     def onPosChange(self, *pos):
-        print("pos changed", pos)
         spos = str(pos)
         self.client.publish(f"{TARGET}/m_pos", spos, retain=True)
 
     def onStateChange(self, state):
-        print("state changed", state)
         self.client.publish(f"{TARGET}/state", state, retain=True)
 
 def main():
