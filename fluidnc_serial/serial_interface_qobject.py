@@ -5,7 +5,7 @@ import time
 import threading
 from PyQt5 import QtCore
 
-STATUS_TIMEOUT=0.05
+STATUS_TIMEOUT=0.01
 
 def openSerial(port, baud):
     serialport = serial.serial_for_url(port, do_not_open=True)
@@ -28,7 +28,7 @@ def openSerial(port, baud):
 class SerialInterface(QtCore.QObject):
     messageChanged = QtCore.pyqtSignal(str)
     stateChanged = QtCore.pyqtSignal(str)
-    posChanged = QtCore.pyqtSignal(float, float, float)
+    posChanged = QtCore.pyqtSignal(float, float, float, float)
 
     def __init__(self, port, mqtt_host, baud=115200):
         super().__init__()
@@ -59,7 +59,7 @@ class SerialInterface(QtCore.QObject):
         if pos_ == self.m_pos:
             return
         self.m_pos = pos_
-        self.posChanged.emit(*pos_[:3])
+        self.posChanged.emit(*pos_[:3], time.time())
 
     def startStatusThread(self):
         self.status_thread = threading.Thread(target=self.get_status)

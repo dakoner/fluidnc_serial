@@ -53,7 +53,7 @@ class FluidNCSerial(QtCore.QCoreApplication):
         self.client.publish(f"{TARGET}/output", message)
 
     def onPosChange(self, *pos):
-        spos = str(pos)
+        spos = str(pos[:3])
         self.client.publish(f"{TARGET}/m_pos", spos, retain=True)
 
     def onStateChange(self, state):
